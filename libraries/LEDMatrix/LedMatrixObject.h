@@ -22,10 +22,12 @@
 
 #ifndef LED_MATRIX_OBJECT_H
 #define LED_MATRIX_OBJECT_H
-typedef void (*CallBackType)();
+typedef void ( *CallBackType )( void );
 
 
-class LedMatrixObject{
+class LedMatrixObject
+{
+
 private:
 	byte LEDARRAY_D;
 	byte LEDARRAY_C;
@@ -36,30 +38,27 @@ private:
 	byte LEDARRAY_CLK;
 	byte LEDARRAY_LAT;
 
-	unsigned char	Scene[16][16];
-	unsigned char	Display_Buffer[2];
-	unsigned int	Word1[32];
+	bool			( *Scene )[ 16 * 16 ];
+	unsigned int	Word[ 32 ];
 
-	void			configure();
-	void			sceneToWord();
-	void			display();
-	void			send(unsigned int dat);
-	void			scan_Line(unsigned int m);
-	void			clearScene();
-	void			digitalWrite(int pin, int state);
+	void			configure( void );
+	void			sceneToWord( void );
+	void			display( void );
+	void			send( unsigned int dat );
+	void			scan_Line( unsigned int m );
+	void			portWrite( int pin, int state );
 
 
 public:
 	bool			Mapping;
 
 	LedMatrixObject(byte LEDARRAY_D, byte LEDARRAY_C, byte LEDARRAY_B, byte LEDARRAY_A, byte LEDARRAY_G, byte LEDARRAY_DI, byte LEDARRAY_CLK, byte LEDARRAY_LAT);
-	void			clear();
-	void			draw();
-	void			setScene(unsigned char  Scene[16][16]);
-	void			setLedOn(int x, int y);
-	void			setLedOff(int x, int y);
-	void			toggleLed(int x, int y);
-
+	void			clear( void );
+	void			draw( void );
+	void			setScene( bool ( *newScene )[ 16 * 16 ] );
+	void			setLedOn( int x, int y );
+	void			setLedOff( int x, int y );
+	void			toggleLed( int x, int y );
 };
 
 

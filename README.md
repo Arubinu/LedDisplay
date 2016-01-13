@@ -11,12 +11,16 @@ Sous Windows:
  - Rendez-vous dans Documents > Arduino, déposez le dossier LedDisplay.
  - Dans ce même dossier allez dans "librairies" et déposez Timer ainsi que LedMatrix.
 
+Sous Linux:
+ - Rendez-vous dans Dossier personnel > Arduino, déposez le dossier LedDisplay.
+ - Dans ce même dossier allez dans "librairies" et déposez Timer ainsi que LedMatrix.
+
 ## Utilisation
 
 Connectez votre Arduino Mega à l'ordinateur.
 Dans l'application Arduino, sélectionner le sketch LedDisplay.
 
-Il vous fait maintenant, soit précisez vos propres pins (ligne 9 à 14), soit relié les panneaux 16x16 comme suit :
+Il vous fait maintenant, soit précisez vos propres pins (dans LedDisplay.h l25 à l30), soit relié les panneaux 16x16 comme suit :
  - 9, 8, 7, 6, 5, 4, 3, 2
  - 23, 25, 27, 29, 31, 33, 35, 37
  - 39, 41, 43, 45, 47, 49, 51, 53

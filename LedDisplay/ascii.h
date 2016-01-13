@@ -1,4 +1,7 @@
-#include <avr/pgmspace.h>
+#ifndef				ASCII_H
+#define				ASCII_H
+
+#include			<avr/pgmspace.h>
 
 const unsigned char	ascii[] PROGMEM	= {
 	// !
@@ -612,3 +615,5 @@ const unsigned char	ascii[] PROGMEM	= {
 	0, 0, 1, 0, 0,
 	1, 1, 0, 0, 0,
 };
+
+#endif

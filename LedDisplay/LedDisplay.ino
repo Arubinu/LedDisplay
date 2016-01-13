@@ -1,71 +1,85 @@
-#include		<avr/pgmspace.h>
+#include		"LedDisplay.h"
+#if ( !ENABLE_DEBUG && !ENABLE_SERIAL && ! ENABLE_BLUETOOTH )
+#error			Il vous faut au moins sélectionner un moyen de communication !
+#elif ( DISPLAY_NUMBER < 1 || DISPLAY_NUMBER > 6 )
+#error			Ce programme est fait pour fonctionner de 1 à 6 afficheurs 16x16
+#endif
 
+#if ENABLE_BLUETOOTH
 #include		<SoftwareSerial.h>
-SoftwareSerial	BTSerial( 10, 11 );
-
-#include		<DateTime.h>
-time_t			timestamp;
-#define			TIME_LENGTH				10
-#define			TIME_HEADER				"date="
-
-#include		"Timer.h"
-Timer			*timer					= new Timer( 42 );
-
-#include		"ascii.h"
-#include		"LedMatrixObject.h"
-
-LedMatrixObject	*led1					= new LedMatrixObject( 14, 15, 16, 17, 18, 19, 20, 21 );
-LedMatrixObject	*led2					= new LedMatrixObject( 9, 8, 7, 6, 12, 4, 3, 2 );
-LedMatrixObject	*led3					= new LedMatrixObject( 23, 25, 27, 29, 31, 33, 35, 37 );
-LedMatrixObject	*led4					= new LedMatrixObject( 39, 41, 43, 45, 47, 49, 51, 53 );
-LedMatrixObject	*led5					= new LedMatrixObject( A0, A1, A2, A3, A4, A5, A6, A7 );
-LedMatrixObject	*led6					= new LedMatrixObject( A8, A9, A10, A11, A12, A13, A14, A15 );
-
-bool			debug;
+SoftwareSerial	BTSerial( BLUETOOTH_RX, BLUETOOTH_TX );
+#endif
 
 int				pos;
-char			*str					= NULL;
-unsigned long	save					= 42;
-unsigned char	screen[ 16 ][ 16 ]		= { { 0 } };
+char			*str		= NULL;
+unsigned long	save		= 42;
+
+time_t			timestamp;
+Timer			*timer		= new Timer( TIMER_TIMEOUT );
+
+LedMatrixObject	*led1		= NULL;
+LedMatrixObject	*led2		= NULL;
+LedMatrixObject	*led3		= NULL;
+LedMatrixObject	*led4		= NULL;
+LedMatrixObject	*led5		= NULL;
+LedMatrixObject	*led6		= NULL;
 
 void	setup()
 {
-	Serial.begin( 9600 );
-	BTSerial.begin( 9600 );
+#if ( ENABLE_DEBUG || ENABLE_SERIAL )
+	Serial.begin( SERIAL_SPEED );
+#endif
+#if ENABLE_BLUETOOTH
+	BTSerial.begin( BLUETOOTH_SPEED );
+#endif
 
-	debug = false;
-	if ( debug )
-	{
-		timeString( __TIMESTAMP__ );
-		//timeString( "Mon Jan 11 23:42:42 2016" );
-		//timeStamp( "1452555632" );
-	}
-
-	led1->Mapping = true;
-	led2->Mapping = true;
-	led3->Mapping = true;
-	led4->Mapping = true;
-	led5->Mapping = true;
-	led6->Mapping = true;
+#if ENABLE_DEBUG
+	timeString( __TIMESTAMP__ );
+	//timeString( "Mon Jan 11 23:42:42 2016" );
+	//timeStamp( "1452555632" );
+#endif
 
 	timer->setOnTimer( &decalScreen );
 	timer->Start();
 
 	bool screen_void[ 16 * 16 ] = { 0 };
 
+#if ( DISPLAY_NUMBER >= 1 )
+	led1 = new LedMatrixObject( DISPLAY_1 );
+	led1->Mapping = true;
 	led1->setScene( &screen_void );
-	led2->setScene( &screen_void );
-	led3->setScene( &screen_void );
-	led4->setScene( &screen_void );
-	led5->setScene( &screen_void );
-	led6->setScene( &screen_void );
-
 	led1->draw();
+#endif
+#if ( DISPLAY_NUMBER >= 2 )
+	led2 = new LedMatrixObject( DISPLAY_2 );
+	led2->Mapping = true;
+	led2->setScene( &screen_void );
 	led2->draw();
+#endif
+#if ( DISPLAY_NUMBER >= 3 )
+	led3 = new LedMatrixObject( DISPLAY_3 );
+	led3->Mapping = true;
+	led3->setScene( &screen_void );
 	led3->draw();
+#endif
+#if ( DISPLAY_NUMBER >= 4 )
+	led4 = new LedMatrixObject( DISPLAY_4 );
+	led4->Mapping = true;
+	led4->setScene( &screen_void );
 	led4->draw();
+#endif
+#if ( DISPLAY_NUMBER >= 5 )
+	led5 = new LedMatrixObject( DISPLAY_5 );
+	led5->Mapping = true;
+	led5->setScene( &screen_void );
 	led5->draw();
+#endif
+#if ( DISPLAY_NUMBER >= 6 )
+	led6 = new LedMatrixObject( DISPLAY_6 );
+	led6->Mapping = true;
+	led6->setScene( &screen_void );
 	led6->draw();
+#endif
 
 	return ;
 }
@@ -75,12 +89,22 @@ void	loop()
 	int		x;
 	int		serial			= 0;
 
+#if ( ENABLE_DEBUG || ENABLE_SERIAL )
 	serial = Serial.available() ? 1 : serial;
+#endif
+#if ENABLE_BLUETOOTH
 	serial = BTSerial.available() ? 2 : serial;
+#endif
 
 	if ( serial )
 	{
+#if ( ( ENABLE_SERIAL || ENABLE_DEBUG ) && ENABLE_BLUETOOTH )
 		String rec = ( serial == 2 ) ? BTSerial.readString() : Serial.readString();
+#elif ENABLE_BLUETOOTH
+		String rec = BTSerial.readString();
+#else
+		String rec = Serial.readString();
+#endif
 		rec.trim();
 
 		if ( rec.length() == ( TIME_LENGTH + strlen( TIME_HEADER ) ) && !strncmp( TIME_HEADER, rec.c_str(), 5 ) )
@@ -90,7 +114,7 @@ void	loop()
 			if ( str )
 				free( str );
 
-			pos = 16 * 6;
+			pos = 16 * DISPLAY_NUMBER;
 			str = ( char * )malloc( sizeof( char ) * ( rec.length() + 1 ) );
 
 			memset( str, 0, rec.length() + 1 );
@@ -103,31 +127,38 @@ void	loop()
 	if ( !str )
 		return ;
 
-	bool screen1[ 16 * 16 ] = { 0 };
-	bool screen2[ 16 * 16 ] = { 0 };
-	bool screen3[ 16 * 16 ] = { 0 };
-	bool screen4[ 16 * 16 ] = { 0 };
-	bool screen5[ 16 * 16 ] = { 0 };
-	bool screen6[ 16 * 16 ] = { 0 };
+	bool screen[ DISPLAY_NUMBER ][ 16 * 16 ] = { { 0 } };
 
 	x = pos;
-	mstringScene( str, pos, 5, screen1, screen2, screen3, screen4, screen5, screen6 );
+	mstringScene( str, pos, 5, screen );
 
-	led1->setScene( &screen1 );
-	led2->setScene( &screen2 );
-	led3->setScene( &screen3 );
-	led4->setScene( &screen4 );
-	led5->setScene( &screen5 );
-	led6->setScene( &screen6 );
+	if ( led1 )
+		led1->setScene( &screen[ 0 ] );
+	if ( led2 )
+		led2->setScene( &screen[ 1 ] );
+	if ( led3 )
+		led3->setScene( &screen[ 2 ] );
+	if ( led4 )
+		led4->setScene( &screen[ 3 ] );
+	if ( led5 )
+		led5->setScene( &screen[ 4 ] );
+	if ( led6 )
+		led6->setScene( &screen[ 5 ] );
 
 	do
 	{
-		led1->draw();
-		led2->draw();
-		led3->draw();
-		led4->draw();
-		led5->draw();
-		led6->draw();
+		if ( led1 )
+			led1->draw();
+		if ( led2 )
+			led2->draw();
+		if ( led3 )
+			led3->draw();
+		if ( led4 )
+			led4->draw();
+		if ( led5 )
+			led5->draw();
+		if ( led6 )
+			led6->draw();
 
 		timer->Update();
 	}
@@ -140,6 +171,53 @@ void	loop()
 		save = millis() + 10000;
 	}
 
+	return ;
+}
+
+void	dateUpdate( void )
+{
+	char	two[ 5 ];
+	byte	b_time[ 7 ]		= { 0 };
+	String	tmp				= "Nous sommes le DAY/MONTH/YEAR et il est HH:MM !";
+
+	if ( !str && DateTime.available() && save < millis() )
+	{
+		pos = 16 * DISPLAY_NUMBER;
+
+		timestamp = DateTime.now();
+		DateTime.localTime( &timestamp, &b_time[ 6 ], &b_time[ 5 ], &b_time[ 4 ], &b_time[ 3 ], &b_time[ 2 ], &b_time[ 1 ], &b_time[ 0 ] );
+
+#if ENABLE_DEBUG
+		Serial.print( "dateUpdate: " );
+		Serial.println( timestamp );
+
+		for ( int i = 0; i <= 6; ++i )
+			Serial.println( b_time[ i ] );
+#endif
+
+		tmp.replace( "HH", toTwo( two, b_time[ 4 ] ) );
+		tmp.replace( "MM", toTwo( two, b_time[ 5 ] ) );
+
+		tmp.replace( "DAY", toTwo( two, b_time[ 3 ] ) );
+		tmp.replace( "MONTH", toTwo( two, b_time[ 1 ] + 1 ) );
+
+		tmp.replace( "YEAR", toTwo( two, b_time[ 0 ] + 1900, 4 ) );
+
+
+		if ( str )
+			free( str );
+		str = ( char * )malloc( sizeof( char ) * ( tmp.length() + 1 ) );
+
+		memset( str, 0, tmp.length() + 1 );
+		strcpy( str, tmp.c_str() );
+	}
+
+	return ;
+}
+
+void	decalScreen( void )
+{
+	pos -= DISPLAY_DECAL;
 	return ;
 }
 
@@ -164,45 +242,17 @@ char	*toTwo( char *str, int num, int count )
 	return ( str );
 }
 
-void	dateUpdate( void )
+void	timeStamp( const char *str )
 {
-	char	two[ 5 ];
-	byte	b_time[ 7 ]		= { 0 };
-	String	tmp				= "Nous sommes le DAY/MONTH/YEAR et il est HH:MM !";
-
-	if ( !str && DateTime.available() && save < millis() )
+	timestamp = 0;
+	for ( int i = 0; i < TIME_LENGTH; ++i )
 	{
-		pos = 16 * 6;
-
-		timestamp = DateTime.now();
-		DateTime.localTime( &timestamp, &b_time[ 6 ], &b_time[ 5 ], &b_time[ 4 ], &b_time[ 3 ], &b_time[ 2 ], &b_time[ 1 ], &b_time[ 0 ] );
-
-		if ( debug )
-		{
-			Serial.print( "dateUpdate: " );
-			Serial.println( timestamp );
-
-			for ( int i = 0; i <= 6; ++i )
-				Serial.println( b_time[ i ] );
-		}
-
-		tmp.replace( "HH", toTwo( two, b_time[ 4 ] ) );
-		tmp.replace( "MM", toTwo( two, b_time[ 5 ] ) );
-
-		tmp.replace( "DAY", toTwo( two, b_time[ 3 ] ) );
-		tmp.replace( "MONTH", toTwo( two, b_time[ 1 ] + 1 ) );
-
-		tmp.replace( "YEAR", toTwo( two, b_time[ 0 ] + 1900, 4 ) );
-
-
-		if ( str )
-			free( str );
-		str = ( char * )malloc( sizeof( char ) * ( tmp.length() + 1 ) );
-
-		memset( str, 0, tmp.length() + 1 );
-		strcpy( str, tmp.c_str() );
+		char c = str[ i ];
+		if ( c >= '0' && c <= '9' )
+			timestamp = ( 10 * timestamp ) + ( c - '0' ) ;
 	}
 
+	DateTime.sync( timestamp TIME_ZONE * 3600 );
 	return ;
 }
 
@@ -236,46 +286,13 @@ void	timeString( const char *str )
 	time_t tmp = DateTime.makeTime( i_time[ 5 ], i_time[ 4 ], i_time[ 3 ], i_time[ 2 ], i_time[ 1 ], i_time[ 0 ] + 1 );
 	DateTime.sync( tmp );
 
-	if ( debug )
-	{
-		Serial.print( "timeString: " );
-		Serial.println( tmp );
+#if ENABLE_DEBUG
+	Serial.print( "timeString: " );
+	Serial.println( tmp );
 
-		for ( int i = 0; i < 6; ++i )
-			Serial.println( i_time[ i ] );
-	}
-
-	return ;
-}
-
-void	timeStamp( const char *str )
-{
-	timestamp = 0;
-	for ( int i = 0; i < TIME_LENGTH; ++i )
-	{
-		char c = str[ i ];
-		if ( c >= '0' && c <= '9' )
-			timestamp = ( 10 * timestamp ) + ( c - '0' ) ;
-	}
-
-	DateTime.sync( timestamp + 3600 ); // +1 ( fuseau horaire )
-	return ;
-}
-
-void	decalScreen()
-{
-	pos -= 2;
-	return ;
-}
-
-void	mcharScene( char c, int x, int y, bool *screen1, bool *screen2, bool *screen3, bool *screen4, bool *screen5, bool *screen6 )
-{
-	charScene( screen1, c, x, y );
-	charScene( screen2, c, x - 16, y );
-	charScene( screen3, c, x - 32, y );
-	charScene( screen4, c, x - 48, y );
-	charScene( screen5, c, x - 64, y );
-	charScene( screen6, c, x - 80, y );
+	for ( int i = 0; i < 6; ++i )
+		Serial.println( i_time[ i ] );
+#endif
 
 	return ;
 }
@@ -291,30 +308,26 @@ int		cstringScene( char *str )
 	return ( decal );
 }
 
-void	mstringScene( char *str, int x, int y, bool *screen1, bool *screen2, bool *screen3, bool *screen4, bool *screen5, bool *screen6 )
+void	mstringScene( char *str, int x, int y, bool ( *screen )[ 16 * 16 ] )
 {
 	int		len;
 	int		decal;
 
 	len = strlen( str );
-	for ( int i = 0; i < len; ++i )
-		mcharScene( str[ i ], ( i * 6 ) + x , y, screen1, screen2, screen3, screen4, screen5, screen6 );
-
-	return ;
-}
-
-void	screenScene( bool *scene )
-{
-	for ( int j = 0; j < 16; ++j )
+	for ( int i = 0, j = 0; i < len; ++i, ++j )
 	{
-		for ( int i = 5; i < 12; ++i ) // réduit pour les leds de défilement
-			screen[ j ][ i ] = scene[ ( 16 * j ) + i ] ? 0 : 1;
+		if ( ( unsigned char )str[ i ] == 195 )
+		{
+			++i;
+			str[ i ] = charNExtend( ( unsigned char )str[ i ], 32 );
+		}
+		mcharScene( str[ i ], ( j * 6 ) + x , y, screen );
 	}
 
 	return ;
 }
 
-void	charScene( bool *scene, char c, int x, int y )
+void	charScene( bool *scene, unsigned char c, int x, int y )
 {
 	int		d;
 
@@ -342,7 +355,39 @@ void	charScene( bool *scene, char c, int x, int y )
 	return ;
 }
 
+void	mcharScene( unsigned char c, int x, int y, bool ( *screen )[ 16 * 16 ] )
+{
+	int		decal;
+
+	for ( int i = 0; i < DISPLAY_NUMBER; ++i )
+	{
+		decal = x - ( 16 * i );
+		if ( decal > -5 && decal < ( 16 * DISPLAY_NUMBER ) )
+			charScene( screen[ i ], c, decal, y );
+	}
+
+	return ;
+}
+
 int		reversePixel( int x, int y )
 {
 	return ( ( 16 * x ) + y );
+}
+
+char	charNExtend( unsigned char c, char diff )
+{
+	int		x				= c + diff;
+
+	x = ( ( x >= 192 && x <= 198 ) || ( x >= 224 && x <= 230 ) ) ? 'A' : x;
+	x = ( ( x >= 200 && x <= 203 ) || ( x >= 232 && x <= 235 ) ) ? 'E' : x;
+	x = ( ( x >= 204 && x <= 207 ) || ( x >= 236 && x <= 239 ) ) ? 'I' : x;
+	x = ( ( x >= 210 && x <= 214 ) || ( x >= 242 && x <= 246 ) ) ? 'O' : x;
+	x = ( ( x >= 217 && x <= 220 ) || ( x >= 249 && x <= 252 ) ) ? 'U' : x;
+	x = ( x == 199 || x == 231 ) ? 'C' : x;
+	x = ( x == 209 || x == 241 ) ? 'N' : x;
+
+	if ( x == ( c + diff ) )
+		return ( ( char )c );
+
+	return ( ( char )x );
 }

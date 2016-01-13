@@ -23,7 +23,8 @@ LedMatrixObject::LedMatrixObject(
 			byte LEDARRAY_D, byte LEDARRAY_C, 
 			byte LEDARRAY_B, byte LEDARRAY_A, 
 			byte LEDARRAY_G, byte LEDARRAY_DI, 
-			byte LEDARRAY_CLK, byte LEDARRAY_LAT){
+			byte LEDARRAY_CLK, byte LEDARRAY_LAT )
+{
 
 	this->LEDARRAY_D = LEDARRAY_D;
 	this->LEDARRAY_C = LEDARRAY_C;
@@ -39,184 +40,228 @@ LedMatrixObject::LedMatrixObject(
 	configure();
 }
 
-
-void LedMatrixObject::configure(){
-	pinMode(LEDARRAY_D, OUTPUT); 
-	pinMode(LEDARRAY_C, OUTPUT);
-	pinMode(LEDARRAY_B, OUTPUT);
-	pinMode(LEDARRAY_A, OUTPUT);
-	pinMode(LEDARRAY_G, OUTPUT);
-	pinMode(LEDARRAY_DI, OUTPUT);
-	pinMode(LEDARRAY_CLK, OUTPUT);
-	pinMode(LEDARRAY_LAT, OUTPUT);
+void LedMatrixObject::configure( void )
+{
+	pinMode( this->LEDARRAY_D, OUTPUT );
+	pinMode( this->LEDARRAY_C, OUTPUT );
+	pinMode( this->LEDARRAY_B, OUTPUT );
+	pinMode( this->LEDARRAY_A, OUTPUT );
+	pinMode( this->LEDARRAY_G, OUTPUT );
+	pinMode( this->LEDARRAY_DI, OUTPUT );
+	pinMode( this->LEDARRAY_CLK, OUTPUT );
+	pinMode( this->LEDARRAY_LAT, OUTPUT );
 }
 
-void LedMatrixObject::clear(){
-	for(int i = 0; i < 32; i++)
-		Word1[i] = 0;
+void LedMatrixObject::clear( void )
+{
+	for ( int i = 0; i < 32; ++i )
+		this->Word[ i ] = 0;
 }
 
-void LedMatrixObject::clearScene(){
-	for(byte i = 0; i < 16; i++)
-		for(byte k = 0; k < 16; k++)
-			this->Scene[i][k] = 1;
-}
-
-void LedMatrixObject::sceneToWord(){
+void LedMatrixObject::sceneToWord( void )
+{
 	//clear word
 	clear();
 
 	int i, k, key = 0;
-	unsigned int value;
-	for(i = 0; i < 16; i++){
-		for(k = 0; k < 16; k++){
-			if(i < 8){
-				value = Scene[i][k] << (7 - i);
-				Word1[15 - k] += value;
-			} else {
-				value = Scene[i][k] << (15 - i);
-				Word1[31 - k] += value;
-			}
+	bool state;
+	for ( i = 0; i < 16; ++i )
+	{
+		for ( k = 5; k < 12; ++k ) // réduit pour les leds de défilement
+		{
+			state = ( *this->Scene )[ i * 16 + k ];
+			if ( !state ) // Optimisation
+				continue ;
+			else if ( i < 8 )
+				this->Word[ 31 - k ] += state << ( 7 - i );
+			else
+				this->Word[ 15 - k ] += state << ( 15 - i );
 		}
 	}
 }
 
-void LedMatrixObject::draw(){
+void LedMatrixObject::draw( void )
+{
 	sceneToWord();
 	display();
-	clearScene();
 }
 
-void LedMatrixObject::display(){
+void LedMatrixObject::display( void )
+{
 	unsigned char i;
 
-	for( i = 0 ; i < 16 ; i++ )
+	for (  i = 0 ; i < 16 ; ++i )
 	{
-		this->digitalWrite(LEDARRAY_G, HIGH);		
-		
-		Display_Buffer[0] = Word1[i];		
-		Display_Buffer[1] = Word1[i+16];
+		this->portWrite( this->LEDARRAY_G, HIGH );
 
-		send(Display_Buffer[1]);
-		send(Display_Buffer[0]);
+		send( this->Word[ i ] );
+		send( this->Word[ i + 16 ] );
 
-		this->digitalWrite(LEDARRAY_LAT, HIGH);					 
-		delayMicroseconds(1);
-	
-		this->digitalWrite(LEDARRAY_LAT, LOW);
-		delayMicroseconds(1);
+		this->portWrite( this->LEDARRAY_LAT, HIGH );
+		delayMicroseconds( 1 );
 
-		scan_Line(i);
+		this->portWrite( this->LEDARRAY_LAT, LOW );
+		delayMicroseconds( 1 );
 
-		this->digitalWrite(LEDARRAY_G, LOW);
-		
-		delayMicroseconds(100);		
-	}	
+		scan_Line( i );
+
+		this->portWrite( this->LEDARRAY_G, LOW );
+
+		delayMicroseconds( 100 );
+	}
 }
 
-void LedMatrixObject::send(unsigned int dat) {
+void LedMatrixObject::send( unsigned int dat )
+{
 	unsigned char i;
-	this->digitalWrite(LEDARRAY_CLK, LOW);
-	delayMicroseconds(1);;	
-	this->digitalWrite(LEDARRAY_LAT, LOW);
-	delayMicroseconds(1);;
 
-	for( i = 0 ; i < 8 ; i++ )
+	this->portWrite( this->LEDARRAY_CLK, LOW );
+	delayMicroseconds( 1 );	
+
+	this->portWrite( this->LEDARRAY_LAT, LOW );
+	delayMicroseconds( 1 );
+
+	for (  i = 0 ; i < 8 ; i++ )
 	{
-		if( dat&0x01 )
-		{
-			this->digitalWrite(LEDARRAY_DI, HIGH);	
-		}
-		else
-		{
-			this->digitalWrite(LEDARRAY_DI, LOW);
-		}
+		this->portWrite( this->LEDARRAY_DI, ( dat & 0x01 ) ? LOW : HIGH );
+		delayMicroseconds( 1 );
 
-		delayMicroseconds(1);
-		this->digitalWrite(LEDARRAY_CLK, HIGH);				  
-			delayMicroseconds(1);
-		this->digitalWrite(LEDARRAY_CLK, LOW);
-			delayMicroseconds(1);		
+		this->portWrite( this->LEDARRAY_CLK, HIGH );				  
+		delayMicroseconds( 1 );
+
+		this->portWrite( this->LEDARRAY_CLK, LOW );
+		delayMicroseconds( 1 );		
+
 		dat >>= 1;
-			
 	}			
 }
 
 
-void LedMatrixObject::scan_Line(unsigned int m) {	
-	switch(m)
+void LedMatrixObject::scan_Line( unsigned int m )
+{
+	switch ( m )
 	{
-		case 0:			
-			this->digitalWrite(LEDARRAY_D, LOW);this->digitalWrite(LEDARRAY_C, LOW);this->digitalWrite(LEDARRAY_B, LOW);this->digitalWrite(LEDARRAY_A, LOW); 					
-			break;
-		case 1:					
-			this->digitalWrite(LEDARRAY_D, LOW);this->digitalWrite(LEDARRAY_C, LOW);this->digitalWrite(LEDARRAY_B, LOW);this->digitalWrite(LEDARRAY_A, HIGH); 		
-			break;
-		case 2:					
-			this->digitalWrite(LEDARRAY_D, LOW);this->digitalWrite(LEDARRAY_C, LOW);this->digitalWrite(LEDARRAY_B, HIGH);this->digitalWrite(LEDARRAY_A, LOW); 		
-			break;
-		case 3:					
-			this->digitalWrite(LEDARRAY_D, LOW);this->digitalWrite(LEDARRAY_C, LOW);this->digitalWrite(LEDARRAY_B, HIGH);this->digitalWrite(LEDARRAY_A, HIGH); 		
-			break;
+		case 0:
+			this->portWrite( this->LEDARRAY_D, LOW );
+			this->portWrite( this->LEDARRAY_C, LOW );
+			this->portWrite( this->LEDARRAY_B, LOW );
+			this->portWrite( this->LEDARRAY_A, LOW );
+			break ;
+		case 1:
+			this->portWrite( this->LEDARRAY_D, LOW );
+			this->portWrite( this->LEDARRAY_C, LOW );
+			this->portWrite( this->LEDARRAY_B, LOW );
+			this->portWrite( this->LEDARRAY_A, HIGH );
+			break ;
+		case 2:
+			this->portWrite( this->LEDARRAY_D, LOW );
+			this->portWrite( this->LEDARRAY_C, LOW );
+			this->portWrite( this->LEDARRAY_B, HIGH );
+			this->portWrite( this->LEDARRAY_A, LOW );
+			break ;
+		case 3:
+			this->portWrite( this->LEDARRAY_D, LOW );
+			this->portWrite( this->LEDARRAY_C, LOW );
+			this->portWrite( this->LEDARRAY_B, HIGH );
+			this->portWrite( this->LEDARRAY_A, HIGH );
+			break ;
 		case 4:
-			this->digitalWrite(LEDARRAY_D, LOW);this->digitalWrite(LEDARRAY_C, HIGH);this->digitalWrite(LEDARRAY_B, LOW);this->digitalWrite(LEDARRAY_A, LOW); 		
-			break;
+			this->portWrite( this->LEDARRAY_D, LOW );
+			this->portWrite( this->LEDARRAY_C, HIGH );
+			this->portWrite( this->LEDARRAY_B, LOW );
+			this->portWrite( this->LEDARRAY_A, LOW );
+			break ;
 		case 5:
-			this->digitalWrite(LEDARRAY_D, LOW);this->digitalWrite(LEDARRAY_C, HIGH);this->digitalWrite(LEDARRAY_B, LOW);this->digitalWrite(LEDARRAY_A, HIGH); 		
-			break;
+			this->portWrite( this->LEDARRAY_D, LOW );
+			this->portWrite( this->LEDARRAY_C, HIGH );
+			this->portWrite( this->LEDARRAY_B, LOW );
+			this->portWrite( this->LEDARRAY_A, HIGH );
+			break ;
 		case 6:
-			this->digitalWrite(LEDARRAY_D, LOW);this->digitalWrite(LEDARRAY_C, HIGH);this->digitalWrite(LEDARRAY_B, HIGH);this->digitalWrite(LEDARRAY_A, LOW); 		
-			break;
+			this->portWrite( this->LEDARRAY_D, LOW );
+			this->portWrite( this->LEDARRAY_C, HIGH );
+			this->portWrite( this->LEDARRAY_B, HIGH );
+			this->portWrite( this->LEDARRAY_A, LOW );
+			break ;
 		case 7:
-			this->digitalWrite(LEDARRAY_D, LOW);this->digitalWrite(LEDARRAY_C, HIGH);this->digitalWrite(LEDARRAY_B, HIGH);this->digitalWrite(LEDARRAY_A, HIGH); 		
-			break;
+			this->portWrite( this->LEDARRAY_D, LOW );
+			this->portWrite( this->LEDARRAY_C, HIGH );
+			this->portWrite( this->LEDARRAY_B, HIGH );
+			this->portWrite( this->LEDARRAY_A, HIGH );
+			break ;
 		case 8:
-			this->digitalWrite(LEDARRAY_D, HIGH);this->digitalWrite(LEDARRAY_C, LOW);this->digitalWrite(LEDARRAY_B, LOW);this->digitalWrite(LEDARRAY_A, LOW); 		
-			break;
+			this->portWrite( this->LEDARRAY_D, HIGH );
+			this->portWrite( this->LEDARRAY_C, LOW );
+			this->portWrite( this->LEDARRAY_B, LOW );
+			this->portWrite( this->LEDARRAY_A, LOW );
+			break ;
 		case 9:
-			this->digitalWrite(LEDARRAY_D, HIGH);this->digitalWrite(LEDARRAY_C, LOW);this->digitalWrite(LEDARRAY_B, LOW);this->digitalWrite(LEDARRAY_A, HIGH); 		
-			break;	
+			this->portWrite( this->LEDARRAY_D, HIGH );
+			this->portWrite( this->LEDARRAY_C, LOW );
+			this->portWrite( this->LEDARRAY_B, LOW );
+			this->portWrite( this->LEDARRAY_A, HIGH );
+			break ;	
 		case 10:
-			this->digitalWrite(LEDARRAY_D, HIGH);this->digitalWrite(LEDARRAY_C, LOW);this->digitalWrite(LEDARRAY_B, HIGH);this->digitalWrite(LEDARRAY_A, LOW); 		
-			break;
+			this->portWrite( this->LEDARRAY_D, HIGH );
+			this->portWrite( this->LEDARRAY_C, LOW );
+			this->portWrite( this->LEDARRAY_B, HIGH );
+			this->portWrite( this->LEDARRAY_A, LOW );
+			break ;
 		case 11:
-			this->digitalWrite(LEDARRAY_D, HIGH);this->digitalWrite(LEDARRAY_C, LOW);this->digitalWrite(LEDARRAY_B, HIGH);this->digitalWrite(LEDARRAY_A, HIGH); 		
-			break;
+			this->portWrite( this->LEDARRAY_D, HIGH );
+			this->portWrite( this->LEDARRAY_C, LOW );
+			this->portWrite( this->LEDARRAY_B, HIGH );
+			this->portWrite( this->LEDARRAY_A, HIGH );
+			break ;
 		case 12:
-			this->digitalWrite(LEDARRAY_D, HIGH);this->digitalWrite(LEDARRAY_C, HIGH);this->digitalWrite(LEDARRAY_B, LOW);this->digitalWrite(LEDARRAY_A, LOW); 		
-			break;
+			this->portWrite( this->LEDARRAY_D, HIGH );
+			this->portWrite( this->LEDARRAY_C, HIGH );
+			this->portWrite( this->LEDARRAY_B, LOW );
+			this->portWrite( this->LEDARRAY_A, LOW );
+			break ;
 		case 13:
-			this->digitalWrite(LEDARRAY_D, HIGH);this->digitalWrite(LEDARRAY_C, HIGH);this->digitalWrite(LEDARRAY_B, LOW);this->digitalWrite(LEDARRAY_A, HIGH); 		
-			break;
+			this->portWrite( this->LEDARRAY_D, HIGH );
+			this->portWrite( this->LEDARRAY_C, HIGH );
+			this->portWrite( this->LEDARRAY_B, LOW );
+			this->portWrite( this->LEDARRAY_A, HIGH );
+			break ;
 		case 14:
-			this->digitalWrite(LEDARRAY_D, HIGH);this->digitalWrite(LEDARRAY_C, HIGH);this->digitalWrite(LEDARRAY_B, HIGH);this->digitalWrite(LEDARRAY_A, LOW); 		
-			break;
+			this->portWrite( this->LEDARRAY_D, HIGH );
+			this->portWrite( this->LEDARRAY_C, HIGH );
+			this->portWrite( this->LEDARRAY_B, HIGH );
+			this->portWrite( this->LEDARRAY_A, LOW );
+			break ;
 		case 15:
-			this->digitalWrite(LEDARRAY_D, HIGH);this->digitalWrite(LEDARRAY_C, HIGH);this->digitalWrite(LEDARRAY_B, HIGH);this->digitalWrite(LEDARRAY_A, HIGH); 		
-			break;
-		default : break;	
+			this->portWrite( this->LEDARRAY_D, HIGH );
+			this->portWrite( this->LEDARRAY_C, HIGH );
+			this->portWrite( this->LEDARRAY_B, HIGH );
+			this->portWrite( this->LEDARRAY_A, HIGH );
+			break ;
 	}
 }
 
-void LedMatrixObject::setScene(unsigned char  Scene[16][16]){
-	for(byte i = 0; i < 16; i++)
-		for(byte k = 0; k < 16; k++)
-			this->Scene[i][k] = Scene[i][k];
+void LedMatrixObject::setScene( bool ( *newScene )[ 16 * 16 ] )
+{
+	this->Scene = newScene;
 }
 
-void LedMatrixObject::setLedOn(int x, int y){
-	Scene[x][y] = 0;
+void LedMatrixObject::setLedOn( int x, int y )
+{
+	( *this->Scene )[ y * 16 + x ] = 0;
 }
 
-void LedMatrixObject::setLedOff(int x, int y){
-	Scene[x][y] = 1;
+void LedMatrixObject::setLedOff( int x, int y )
+{
+	( *this->Scene )[ y * 16 + x ] = 1;
 }
 
-void LedMatrixObject::toggleLed(int x, int y){
-	Scene[x][y] = !Scene[x][y];
+void LedMatrixObject::toggleLed( int x, int y )
+{
+	( *this->Scene )[ y * 16 + x ] = !( *this->Scene )[ y * 16 + x ];
 }
 
-void LedMatrixObject::digitalWrite(int pin, int state){
+void LedMatrixObject::portWrite( int pin, int state )
+{
 	if ( !this->Mapping )
 	{
 		digitalWrite( pin, state );
