@@ -9,11 +9,11 @@ Projet Arduino regroupant 6 panneaux de 16x16 leds faisant défiler une phrase.
 
 Sous Windows:
  - Rendez-vous dans Documents > Arduino, déposez le dossier LedDisplay.
- - Dans ce même dossier allez dans "librairies" et déposez Timer ainsi que LedMatrix.
+ - Dans ce même dossier allez dans "librairies" et déposez Timer, DateTime, ainsi que LedMatrix.
 
 Sous Linux:
  - Rendez-vous dans Dossier personnel > Arduino, déposez le dossier LedDisplay.
- - Dans ce même dossier allez dans "librairies" et déposez Timer ainsi que LedMatrix.
+ - Dans ce même dossier allez dans "librairies" et déposez Timer, DateTime, ainsi que LedMatrix.
 
 ## Utilisation
 
