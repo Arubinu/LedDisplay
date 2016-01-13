@@ -7,7 +7,7 @@
 
 #define		ENABLE_DEBUG			false
 #define		ENABLE_SERIAL			true
-#define		ENABLE_BLUETOOTH		true
+#define		ENABLE_BLUETOOTH		false
 
 #define		SERIAL_SPEED			9600
 #define		BLUETOOTH_SPEED			9600
