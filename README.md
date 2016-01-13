@@ -36,7 +36,7 @@ Pour envoyer une phrase à l'arduino, ouvre le moniteur série et envoyez direct
 
 ## Fonctionnalitées supplémentaires
 
-En envoyer "date=1384504920" vous activerez l'affichage de la date à laquelle l'école 42 ( à Paris ) a ouverte ses portes.
+En envoyant "date=1384504920" vous activerez l'affichage de la date à laquelle l'école 42 ( à Paris ) a ouverte ses portes.
 Vous pouvez préciser un autre timestamp UTC ( via par exemple www.timestamp.fr ).
 Toutefois, il faut obligatoirement 10 chiffres ( ou changer son comportement dans le fichier LedDisplay.h ).
 
